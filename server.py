@@ -645,6 +645,72 @@ def download_share(slug: str, request: Request) -> Response:
     )
 
 
+@app.post("/api/shares/{slug}/update")
+def update_share(
+    slug: str,
+    request: Request,
+    new_slug: Optional[str] = Form(None),
+    title: Optional[str] = Form(None),
+    days: Optional[int] = Form(None),
+    pw_action: str = Form("keep"),
+    password: Optional[str] = Form(None),
+) -> JSONResponse:
+    """Edit a live share: rename the URL, retitle it, set/clear its password,
+    or set its whole lifetime (days from now, 0 = never)."""
+    require_auth(request)
+    data = load()
+    meta = data.get(slug)
+    if not meta:
+        raise HTTPException(404, "no such slug")
+
+    current = slug
+    wanted = (new_slug or "").strip().lower()
+    if wanted and wanted != slug:
+        if not SLUG_RE.match(wanted):
+            raise HTTPException(400, "name must be a-z0-9._- (max 64)")
+        if wanted in data:
+            raise HTTPException(409, f"name '{wanted}' already exists")
+        src, dst = STORAGE / slug, STORAGE / wanted
+        if src.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(dst))
+        data.pop(slug)
+        data[wanted] = meta
+        meta["slug"] = wanted
+        current = wanted
+
+    if title is not None:
+        meta["title"] = title.strip() or current
+
+    if pw_action == "clear":
+        meta["pw_hash"] = None
+        meta["pw_salt"] = None
+    elif pw_action == "set":
+        if not password:
+            raise HTTPException(400, "password cannot be empty")
+        salt = secrets.token_hex(8)
+        meta["pw_salt"] = salt
+        meta["pw_hash"] = hash_pw(password, salt)
+
+    if days is not None:
+        d = max(int(days), 0)
+        meta["expires_at"] = (
+            (_now() + timedelta(days=d)).isoformat(timespec="seconds") if d else None
+        )
+
+    save(data)
+    return JSONResponse(
+        {
+            "ok": True,
+            "slug": current,
+            "url": f"https://temp.kylekaihin.org/{current}/",
+            "title": meta.get("title", current),
+            "expires_at": meta.get("expires_at"),
+            "password": bool(meta.get("pw_hash")),
+        }
+    )
+
+
 @app.post("/api/shares/{slug}/extend")
 def extend_share(slug: str, request: Request, days: int = Form(7)) -> JSONResponse:
     require_auth(request)

@@ -4,7 +4,7 @@ Run with:  pytest -q
 """
 import json
 import zipfile
-from datetime import timedelta
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -302,6 +302,48 @@ def test_extend_pushes_the_deadline(client, auth, site, app):
     r = client.post("/api/shares/ext/extend", headers=auth, data={"days": 7})
     assert r.status_code == 200
     assert app.load()["ext"]["expires_at"] > before
+
+
+# ----------------------------------------------------------------- update ---
+def test_update_renames_the_share_and_moves_its_files(client, auth, site, app):
+    make_share(client, auth, slug="before", local_path=str(site))
+    r = client.post("/api/shares/before/update", headers=auth, data={"new_slug": "after"})
+    assert r.status_code == 200
+    data = app.load()
+    assert "before" not in data and "after" in data
+    assert (app.STORAGE / "after").exists() and not (app.STORAGE / "before").exists()
+    assert client.get("/after/").status_code == 200
+    assert client.get("/before/").status_code == 404
+
+
+def test_update_rejects_a_name_that_is_taken(client, auth, site, app):
+    make_share(client, auth, slug="one", local_path=str(site))
+    make_share(client, auth, slug="two", local_path=str(site))
+    r = client.post("/api/shares/one/update", headers=auth, data={"new_slug": "two"})
+    assert r.status_code == 409
+    assert (app.STORAGE / "one").exists()
+
+
+def test_update_sets_and_clears_the_password(client, auth, site, app):
+    make_share(client, auth, slug="lock", local_path=str(site))
+    r = client.post("/api/shares/lock/update", headers=auth,
+                    data={"pw_action": "set", "password": "hunter2"})
+    assert r.status_code == 200 and r.json()["password"] is True
+    assert client.get("/lock/").status_code == 401
+    r = client.post("/api/shares/lock/update", headers=auth, data={"pw_action": "clear"})
+    assert r.status_code == 200 and r.json()["password"] is False
+    assert client.get("/lock/").status_code == 200
+
+
+def test_update_sets_the_whole_lifetime(client, auth, site, app):
+    make_share(client, auth, slug="life", days=1, local_path=str(site))
+    r = client.post("/api/shares/life/update", headers=auth, data={"days": 30})
+    assert r.status_code == 200
+    exp = app.load()["life"]["expires_at"]
+    assert exp and (datetime.fromisoformat(exp) - app._now()).days >= 29
+    r = client.post("/api/shares/life/update", headers=auth, data={"days": 0})
+    assert r.json()["expires_at"] is None
+    assert app.load()["life"]["expires_at"] is None
 
 
 # ------------------------------------------------------------------ panel ----

@@ -339,6 +339,17 @@ button.icon-only { padding: 9px; }
 .share-meta .dot { color: var(--line); }
 .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; align-items: center; }
 
+/* ------------------------------------------------------------ edit form --- */
+.edit-form { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px; }
+.edit-form .grid4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.edit-form .chk {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+  font-size: 0.8125rem; font-weight: 500; color: var(--muted);
+  text-transform: none; letter-spacing: 0;
+}
+.edit-form .chk input { width: auto; margin: 0; }
+.edit-form .form-foot { margin-top: 16px; }
+
 .vlog { margin-top: 14px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
 .vlog summary {
   cursor: pointer; color: var(--muted); font-size: 0.8125rem; font-weight: 500;
@@ -517,7 +528,7 @@ ul.files li.up a svg.i { color: var(--muted); }
   .who { margin-left: auto; }
   .stats { grid-template-columns: repeat(3, 1fr); }
   .wrap { padding: 22px 18px 64px; }
-  .grid3 { grid-template-columns: 1fr; }
+  .grid3, .edit-form .grid4 { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   h1 { font-size: 1.75rem; }
