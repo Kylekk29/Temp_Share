@@ -1,4 +1,6 @@
-# temp-share
+**English** | [简体中文](README.zh-CN.md)
+
+# Temp Share
 
 Drop a folder, an HTML file, or a `.zip` on it → get a public URL. Links can expire, can be
 password-locked, and can be **one-time** (they destroy themselves after the first visit).
@@ -54,7 +56,7 @@ no pure black, no 3-equal-column feature rows. The seed tokens (CSS variables) a
 ## Quick start (local, 60 seconds)
 
 ```bash
-git clone <repo> && cd temp-share
+git clone <repo> && cd Temp_Share
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 PORT=19011 python server.py
