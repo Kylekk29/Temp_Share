@@ -23,6 +23,7 @@ import struct
 import time
 import zipfile
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 from pathlib import Path
 from typing import Optional
 
@@ -46,6 +47,10 @@ SESSION_FILE = DATA / "sessions.json"
 SESSION_DAYS = 30
 DEFAULT_PASSWORD = "12345678"
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+INLINE_SUFFIXES = {
+    ".html", ".htm", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg",
+    ".gif", ".webp", ".mp4", ".webm", ".mp3", ".pdf", ".txt", ".md", ".woff2", ".ico", ".csv",
+}
 DEFAULT_DOCS = ["index.html", "index.htm", "Index.html"]
 
 for d in (DATA, STORAGE, TMP):
@@ -864,6 +869,7 @@ def serve(slug: str, path: str, request: Request) -> Response:
     if burned_now or visit or data[slug]["hits"] % 5 == 0:
         save(data)
 
+    suffix = target.suffix.lower()
     media = {
         ".html": "text/html", ".htm": "text/html", ".css": "text/css", ".js": "text/javascript",
         ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -871,8 +877,17 @@ def serve(slug: str, path: str, request: Request) -> Response:
         ".mp4": "video/mp4", ".webm": "video/webm", ".mp3": "audio/mpeg", ".pdf": "application/pdf",
         ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8",
         ".woff2": "font/woff2", ".ico": "image/x-icon", ".csv": "text/csv",
-    }.get(target.suffix.lower(), "application/octet-stream")
-    return Response(content=target.read_bytes(), media_type=media)
+    }.get(suffix, "application/octet-stream")
+    # Always name the file in Content-Disposition so downloads keep their real
+    # extension (.py, .zip, .docx, …).  Without it a single-file share served at
+    # /<slug>/ saves as the slug with no extension.
+    name = target.name
+    ascii_name = name.encode("ascii", "replace").decode("ascii").replace('"', "'")
+    disposition = "inline" if suffix in INLINE_SUFFIXES else "attachment"
+    headers = {
+        "Content-Disposition": f"{disposition}; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}"
+    }
+    return Response(content=target.read_bytes(), media_type=media, headers=headers)
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -9,3 +9,6 @@ tmp/
 .env
 .pytest_cache/
 shots/
+data/backups/
+.admin-password
+shares.json

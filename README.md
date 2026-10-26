@@ -63,7 +63,7 @@ PORT=19011 python server.py
 # → http://127.0.0.1:19011
 ```
 
-Sign in with the password **`12345678`** — then change it immediately under **Settings**.
+Sign in with the password set at first run — then change it immediately under **Settings**.
 The panel stores a `scrypt` hash in `./.admin-password` (mode 600), never the password itself.
 A separate `./.api-token` still exists for the `tshare` CLI and automation.
 
